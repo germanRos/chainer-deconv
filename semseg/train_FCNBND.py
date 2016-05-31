@@ -23,7 +23,7 @@ from Nets.FCN_BND import FCN_BND as Netmodel
 
 GPU_ID				= 0
 BSIZE				= 4
-BATCHES_EPOCH			= 150
+BATCHES_EPOCH			= 2
 NEPOCHS 			= 10000
 TRAINFILE			= '/Extra/Data/DataSEMSEG/chainer_total.txt'
 VALIDFILE			= '/Extra/Data/DataSEMSEG/chainer_val_multi.txt'

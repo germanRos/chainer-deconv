@@ -23,6 +23,7 @@ GPU_ID				= 0
 CLASSES				= 11
 NEWSIZE				= (360, 480)
 MODEL_NAME			= '/Extra/Experiments/tmp_FCNBND_e1_/FCNBND_e1__392.model'
+TESTFILE			= '/Extra/Data/Images/list.txt'
 
 # Stats manager is used for stats ploting and visualization (probably the most important part!)
 stats_opts = {}
@@ -49,7 +50,8 @@ def fromHEX2RGB(colorsM):
 	return LUT
 
 def inference():
-	cap = cv2.VideoCapture(0)
+	cv2.namedWindow('frame', cv2.WINDOW_NORMAL)
+	#cv2.namedWindow('pred', cv2.WINDOW_NORMAL)
 
 
 	# load model
@@ -63,37 +65,43 @@ def inference():
 
 	batchRGB = np.zeros((1, 3, NEWSIZE[1], NEWSIZE[0]), dtype='float32')
 
-	while(True):
-    		# Capture frame-by-frame
-    		ret, frame = cap.read()
+	# go throught the data
+	flist = []
+	with open(TESTFILE) as f:
+		for line in f:
+			cline = re.split('\n',line)
+
+			#print(cline[0])
+			frame = misc.imread(cline[0])
+			frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 		
-		# process frame
-		im = misc.imresize(frame, NEWSIZE, interp='bilinear')
-		# convertion from HxWxCH to CHxWxH
-		batchRGB[0,:,:,:] = im.astype(np.float32).transpose((2,1,0))
-		batchRGBn = batchRGB  - 127.0
+			# process frame
+			im = misc.imresize(frame, NEWSIZE, interp='bilinear')
+			# convertion from HxWxCH to CHxWxH
+			batchRGB[0,:,:,:] = im.astype(np.float32).transpose((2,1,0))
+			batchRGBn = batchRGB  - 127.0
 
-		# data ready
-		batch = chainer.Variable(cuda.cupy.asarray(batchRGBn))
+			# data ready
+			batch = chainer.Variable(cuda.cupy.asarray(batchRGBn))
 
-		# make predictions
-		model((batch, []), test_mode=2)
-		pred = model.probs.data.argmax(1)
-		# move data back to CPU
-		pred_ = cuda.to_cpu(pred)
+			# make predictions
+			model((batch, []), test_mode=2)
+			pred = model.probs.data.argmax(1)
+			# move data back to CPU
+			pred_ = cuda.to_cpu(pred)
 
-		pred_ = LUT[pred_+1,:].squeeze()
-		pred_ = pred_.transpose((1,0,2))
-		pred2 = cv2.cvtColor(pred_, cv2.COLOR_BGR2RGB)
+			pred_ = LUT[pred_+1,:].squeeze()
+			pred_ = pred_.transpose((1,0,2))
+			pred2 = cv2.cvtColor(pred_, cv2.COLOR_BGR2RGB)
 
-    		# Display the resulting frame
-   		cv2.imshow('frame',frame)
-   		cv2.imshow('pred',pred2)
-    		if cv2.waitKey(1) & 0xFF == ord('q'):
-        		break
+			#ipdb.set_trace()
+			disp = (0.4*im + 0.6*pred2).astype(np.uint8)
 
-	# When everything done, release the capture
-	cap.release()
+    			# Display the resulting frame
+   			cv2.imshow('frame',disp)
+   			#cv2.imshow('pred',pred2)
+    			if cv2.waitKey(-1) & 0xFF == ord('q'):
+        			break
 	cv2.destroyAllWindows()
 
 inference()
